@@ -14,33 +14,19 @@ export const ESCAPE_CHARACTER = '\\';
  * "Oh\.\.\." is a name with one component, if the delimiter character is '.'.
  */
 export class Name {
-
     private delimiter: string = DEFAULT_DELIMITER;
     private components: string[] = [];
 
     /** Expects that all Name components are properly masked */
+    // @methodtype initialization-method
     constructor(other: string[], delimiter?: string) {
-        if (!Array.isArray(other)) {
+        if (other === undefined || other === null) {
             throw new Error("Constructor expects an array of string components");
         }
         this.components = [...other];
-        if (delimiter) {
+        if(delimiter){ // does not allow for empty string delimiter ""
             this.delimiter = delimiter;
         }
-    }
-
-    private unmaskComponent(component: string, delim: string): string {
-        let result = "";
-        for (let i = 0; i < component.length; i++) {
-            if (component[i] === ESCAPE_CHARACTER) {
-                const nextChar = component[i + 1];
-                result += nextChar; // or result += nextChar? depends
-                i++;
-            } else {
-                result += component[i];
-            }
-        }
-        return result;
     }
 
     /**
@@ -48,21 +34,23 @@ export class Name {
      * Special characters are not escaped (creating a human-readable string)
      * Users can vary the delimiter character to be used
      */
+    // @methodtype conversion-method
     public asString(delimiter: string = this.delimiter): string {
         return this.components
-            .map(c => this.unmaskComponent(c, delimiter)
-            )
-            .join(delimiter);
+            .map(c => this.unmaskComponent(c, this.delimiter)
+            ).join(delimiter);
     }
     /** 
      * Returns a machine-readable representation of Name instance using default special characters
      * Machine-readable means that from a data string, a Name can be parsed back in
      * The special characters in the data string are the default characters
      */
+    // @methodtype conversion-method
     public asDataString(): string {
         return this.components.join(DEFAULT_DELIMITER);
     }
 
+    // @methodtype get-method 
     public getComponent(i: number): string {
         if (i < 0 || i >= this.components.length) {
             throw new Error("Component index out of range");
@@ -71,6 +59,7 @@ export class Name {
     }
 
     /** Expects that new Name component c is properly masked */
+    // @methodtype set-method
     public setComponent(i: number, c: string): void {
         if (i < 0 || i >= this.components.length) {
             throw new Error("Component index out of range");
@@ -82,11 +71,13 @@ export class Name {
     }
 
     /** Returns number of components in Name instance */
+    // @methodtype get-method 
     public getNoComponents(): number {
         return this.components.length;
     }
 
     /** Expects that new Name component c is properly masked */
+    // @methodtype command-method
     public insert(i: number, c: string): void {
         if (i < 0 || i > this.components.length) {
             throw new Error("Insert index out of range");
@@ -98,6 +89,7 @@ export class Name {
     }
 
     /** Expects that new Name component c is properly masked */
+    // @methodtype command-method
     public append(c: string): void {
         if(c === null || c === undefined) {
             throw new Error("append: string must not be null or undefined");
@@ -105,11 +97,27 @@ export class Name {
         this.components.push(c);
     }
 
+    // @methodtype command-method
     public remove(i: number): void {
         if (i < 0 || i >= this.components.length) {
             throw new Error("Remove index out of range");
         }
         this.components.splice(i, 1);
+    }
+
+    // @methodtype helper-method
+    private unmaskComponent(component: string, delim: string): string {
+        let result = "";
+        for (let i = 0; i < component.length; i++) {
+            if (component[i] === ESCAPE_CHARACTER) {
+                const nextChar = component[i + 1];
+                result += nextChar; 
+                i++;
+            } else {
+                result += component[i];
+            }
+        }
+        return result;
     }
 }
 

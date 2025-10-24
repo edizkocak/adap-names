@@ -8,7 +8,30 @@ export class StringName implements Name {
     protected noComponents: number = 0;
 
     constructor(source: string, delimiter?: string) {
-        throw new Error("needs implementation or deletion");
+        this.name = source;
+
+        if(delimiter){
+            this.delimiter = delimiter;
+        }
+
+        this.noComponents = 0;
+        let inEscape = false;
+
+        for (let i = 0; i < this.name.length; i++) {
+            const char = source[i];
+
+            if (inEscape) {
+                inEscape = false;
+            } else if (char === ESCAPE_CHARACTER) {
+                inEscape = true;
+            } else if (char === this.delimiter) {
+                this.noComponents++;
+            }
+        }
+
+        if (this.name.length > 0) {
+            this.noComponents++;
+        }
     }
 
     public asString(delimiter: string = this.delimiter): string {
@@ -16,19 +39,19 @@ export class StringName implements Name {
     }
 
     public asDataString(): string {
-        throw new Error("needs implementation or deletion");
+        return this.name;
     }
 
     public getDelimiterCharacter(): string {
-        throw new Error("needs implementation or deletion");
+        return this.delimiter;
     }
 
     public isEmpty(): boolean {
-        throw new Error("needs implementation or deletion");
+        return this.noComponents == 0 ? true : false;
     }
 
     public getNoComponents(): number {
-        throw new Error("needs implementation or deletion");
+        return this.noComponents;
     }
 
     public getComponent(x: number): string {
@@ -44,7 +67,8 @@ export class StringName implements Name {
     }
 
     public append(c: string): void {
-        throw new Error("needs implementation or deletion");
+        this.name += this.delimiter;
+        this.name += c;
     }
 
     public remove(n: number): void {
