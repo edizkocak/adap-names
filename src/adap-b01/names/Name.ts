@@ -20,9 +20,6 @@ export class Name {
     /** Expects that all Name components are properly masked */
     // @methodtype initialization-method
     constructor(other: string[], delimiter?: string) {
-        if (other === undefined || other === null) {
-            throw new Error("Constructor expects an array of string components");
-        }
         this.components = [...other];
         if(delimiter){ // does not allow for empty string delimiter ""
             this.delimiter = delimiter;
@@ -37,8 +34,8 @@ export class Name {
     // @methodtype conversion-method
     public asString(delimiter: string = this.delimiter): string {
         return this.components
-            .map(c => this.unmaskComponent(c, this.delimiter)
-            ).join(delimiter);
+            .map(c => this.unmaskComponent(c, this.delimiter))
+            .join(delimiter);
     }
     /** 
      * Returns a machine-readable representation of Name instance using default special characters
@@ -47,27 +44,28 @@ export class Name {
      */
     // @methodtype conversion-method
     public asDataString(): string {
+        if(this.delimiter !== DEFAULT_DELIMITER){
+            return this.components
+                .map(c => this.unmaskComponent(c, this.delimiter))
+                .map(c => this.maskComponent(c, DEFAULT_DELIMITER))
+                .join(DEFAULT_DELIMITER);
+        }
         return this.components.join(DEFAULT_DELIMITER);
     }
 
     /** Returns properly masked component string */
     // @methodtype get-method 
     public getComponent(i: number): string {
-        if (i < 0 || i >= this.components.length) {
-            throw new Error("Component index out of range");
-        }
+        this.assertIsNotNullOrUndefined(i);
+        this.assertIsValidIndex(i, this.getNoComponents(), "get");
         return this.components[i];
     }
 
     /** Expects that new Name component c is properly masked */
     // @methodtype set-method
     public setComponent(i: number, c: string): void {
-        if (i < 0 || i >= this.components.length) {
-            throw new Error("Component index out of range");
-        }
-        if(c === null || c === undefined) {
-            throw new Error("setComponent: string must not be null or undefined");
-        }
+        this.assertIsNotNullOrUndefined(i);
+        this.assertIsValidIndex(i, this.getNoComponents(), "set");
         this.components[i] = c;
     }
 
@@ -80,29 +78,21 @@ export class Name {
     /** Expects that new Name component c is properly masked */
     // @methodtype command-method
     public insert(i: number, c: string): void {
-        if (i < 0 || i > this.components.length) {
-            throw new Error("Insert index out of range");
-        }
-        if(c === null || c === undefined) {
-            throw new Error("insert: string must not be null or undefined");
-        }
+        this.assertIsNotNullOrUndefined(i);
+        this.assertIsValidIndex(i, this.getNoComponents() + 1, "insert");
         this.components.splice(i, 0, c);
     }
 
     /** Expects that new Name component c is properly masked */
     // @methodtype command-method
     public append(c: string): void {
-        if(c === null || c === undefined) {
-            throw new Error("append: string must not be null or undefined");
-        }
         this.components.push(c);
     }
 
     // @methodtype command-method
     public remove(i: number): void {
-        if (i < 0 || i >= this.components.length) {
-            throw new Error("Remove index out of range");
-        }
+        this.assertIsNotNullOrUndefined(i);
+        this.assertIsValidIndex(i, this.getNoComponents(), "remove");
         this.components.splice(i, 1);
     }
 
@@ -111,14 +101,45 @@ export class Name {
         let result = "";
         for (let i = 0; i < component.length; i++) {
             if (component[i] === ESCAPE_CHARACTER) {
-                const nextChar = component[i + 1];
-                result += nextChar; 
+                result += component[i + 1]; 
                 i++;
             } else {
                 result += component[i];
             }
         }
         return result;
+    }
+
+    // @methodtype helper-method
+    private maskComponent(component: string, delim: string): string {
+        let result = "";
+        for (let i = 0; i < component.length; i++) {
+            if (component[i] === ESCAPE_CHARACTER) {
+                result += component[i + 1]; 
+                i++;
+            } else if(component[i] == DEFAULT_DELIMITER){
+                result += ESCAPE_CHARACTER;
+                result += component[i];
+            }
+            else{
+                result += component[i];
+            }
+        }
+        return result;
+    }
+
+    // @methodtype assertion-method
+    private assertIsValidIndex(index : number, upperBound : number, funcName : string) : void{
+        if(index < 0 || index >= upperBound){
+            throw new Error(`${funcName}: index out of range")`);
+        }
+    }
+
+    // @methodtype assertion-method
+    private assertIsNotNullOrUndefined(other: Object): void {
+        if ((other == null) || (other == undefined)) {
+            throw new RangeError("Value is null or undefined");
+        }
     }
 }
 
