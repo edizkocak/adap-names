@@ -1,5 +1,6 @@
 import { DEFAULT_DELIMITER, ESCAPE_CHARACTER } from "../common/Printable";
 import { Name } from "./Name";
+import { assertIsNotNullOrUndefined, assertIsValidIndex, unmaskComponent, maskComponent } from "./utils";
 
 export class StringArrayName implements Name {
 
@@ -7,37 +8,59 @@ export class StringArrayName implements Name {
     protected components: string[] = [];
 
     constructor(other: string[], delimiter?: string) {
-        if (!Array.isArray(other)) {
-            throw new Error("Constructor expects an array of string components");
+        assertIsNotNullOrUndefined(other, "constructor StringArrayName");
+
+        if(delimiter === null){
+            throw new TypeError("delimiter must not be null");
         }
-        this.components = [...other];
-        if (delimiter) {
+        if(delimiter !== undefined){
+            if (typeof delimiter !== "string" || delimiter.length !== 1 || delimiter === ESCAPE_CHARACTER) {
+                throw new TypeError("delimiter must be a single character (not escape)");
+            }
             this.delimiter = delimiter;
         }
-    }
-    private unmaskComponent(component: string, delim: string): string {
-        let result = "";
-        for (let i = 0; i < component.length; i++) {
-            if (component[i] === ESCAPE_CHARACTER) {
-                const nextChar = component[i + 1];
-                result += nextChar; // or result += nextChar? depends
-                i++;
-            } else {
-                result += component[i];
+
+        if (!Array.isArray(other)) {
+            throw new TypeError("StringArrayName constructor: other must be an array");
+        }
+
+        for(let i = 0; i < other.length; i++){
+            assertIsNotNullOrUndefined(other[i], "constructor StringArrayName");
+            if(typeof other[i] !== "string"){
+                throw new TypeError("name components must be of type string");
             }
         }
-        return result;
+        this.components = [...other];
     }
 
     public asString(delimiter: string = this.delimiter): string {
+        assertIsNotNullOrUndefined(delimiter, "asString");
+        if(typeof delimiter !== "string" || delimiter.length !== 1 || delimiter === ESCAPE_CHARACTER){
+            throw new TypeError("asString: delimiter has to be a single character (not escape)");
+        }
+
         return this.components
-            .map(c => this.unmaskComponent(c, delimiter)
-            )
+            .map(c => unmaskComponent(c, this.delimiter, true))
             .join(delimiter);
     }
 
     public asDataString(): string {
-        return this.components.join(DEFAULT_DELIMITER);
+        // make sure that from data string a Name can be parsed back in
+        // example: we have a\# bb c.c   |  3 components with delimiter #
+        // after asDataString() the string will be a\#.bb.c.c  !! has 4 components instead of the original 3 !!
+        // therefore it would not be possible to be parsed back in
+        // solution: for the case where the delimiter is not "." , but "." is inside a component,
+        // we have to mask "." to make sure we still maintain the same number of components
+        // after asDataString() -> a\#.bb.c\.c    | note that here, because we masked "." in the 3rd component
+        // it has 3 components again, and can be parsed back in
+        if(this.delimiter === DEFAULT_DELIMITER){
+            return this.components.join(DEFAULT_DELIMITER);
+        }
+
+        return this.components
+            .map(c => unmaskComponent(c, this.delimiter))
+            .map(c => maskComponent(c, DEFAULT_DELIMITER))
+            .join(DEFAULT_DELIMITER);
     }
 
     public getDelimiterCharacter(): string {
@@ -45,7 +68,7 @@ export class StringArrayName implements Name {
     }
 
     public isEmpty(): boolean {
-        return this.getNoComponents() == 0 ? true : false;
+        return this.getNoComponents() === 0;
     }
 
     public getNoComponents(): number {
@@ -53,51 +76,52 @@ export class StringArrayName implements Name {
     }
 
     public getComponent(i: number): string {
-        if (i < 0 || i >= this.components.length) {
-            throw new Error("Component index out of range");
-        }
+        assertIsNotNullOrUndefined(i, "getComponent");
+        assertIsValidIndex(i, this.getNoComponents(), "getComponent");
         return this.components[i];
     }
 
     public setComponent(i: number, c: string): void {
-        if (i < 0 || i >= this.components.length) {
-            throw new Error("Component index out of range");
-        }
-        if(c === null || c === undefined) {
-            throw new Error("setComponent: string must not be null or undefined");
-        }
+        assertIsNotNullOrUndefined(i, "setComponent");
+        assertIsNotNullOrUndefined(c, "setComponent");
+        assertIsValidIndex(i, this.getNoComponents(), "setComponent");
+
         this.components[i] = c;
     }
 
     public insert(i: number, c: string): void {
-        if (i < 0 || i > this.components.length) {
-            throw new Error("Insert index out of range");
-        }
-        if(c === null || c === undefined) {
-            throw new Error("insert: string must not be null or undefined");
-        }
+        assertIsNotNullOrUndefined(i, "insert");
+        assertIsNotNullOrUndefined(c, "insert");
+        assertIsValidIndex(i, this.getNoComponents() + 1, "insert");
         this.components.splice(i, 0, c);
     }
 
     public append(c: string): void {
-        if(c === null || c === undefined) {
-            throw new Error("append: string must not be null or undefined");
-        }
+        assertIsNotNullOrUndefined(c, "append");
         this.components.push(c);
     }
 
     public remove(i: number): void {
-        if (i < 0 || i >= this.components.length) {
-            throw new Error("Remove index out of range");
-        }
+        assertIsNotNullOrUndefined(i, "remove");
+        assertIsValidIndex(i, this.getNoComponents(), "remove");
         this.components.splice(i, 1);
     }
 
     public concat(other: Name): void {
-        let otherNumComponents = other.getNoComponents();
-        for(let i = 0; i < otherNumComponents; i++){
-            this.append(other.getComponent(i));
+        assertIsNotNullOrUndefined(other, "concat");
+
+        if(other.getNoComponents() === 0){
+            return;
+        }
+
+        let otherDelim = other.getDelimiterCharacter();
+        for(let i = 0; i < other.getNoComponents(); i++){
+            let comp = other.getComponent(i);
+            if(this.delimiter !== otherDelim){
+                let unmasked = unmaskComponent(comp, otherDelim);
+                comp = maskComponent(unmasked, this.delimiter);
+            }
+            this.append(comp);
         }
     }
-
 }
