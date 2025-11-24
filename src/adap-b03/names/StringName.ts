@@ -35,7 +35,7 @@ export class StringName extends AbstractName {
             cloned.remove(0); // now cloned object is also an empty StringName
         }
 
-        return new StringName(this.name, this.delimiter);
+        return cloned;
     }
 
     public getNoComponents(): number {
